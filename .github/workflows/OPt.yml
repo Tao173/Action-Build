@@ -5,13 +5,21 @@
 # DIY: Tao173 
 #===============================================
 
-name: openwrt_build_test_action
+name: openwrt-build-test-action
 
 on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
-      ssh:
+      ssh1:
+        description: '是否开启SSH以调试'
+        required: false
+        type: choice
+        default: 'false'
+        options:
+          - true
+          - false
+      ssh2:
         description: '是否开启SSH以调试'
         required: false
         type: choice
@@ -84,7 +92,7 @@ jobs:
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         
     - name: Setup Debug Session 'touch /tmp/keepalivegit'
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') 
+      if: (github.event.inputs.ssh1 == 'true' && github.event.inputs.ssh1  != 'false') 
       uses: csexton/debugger-action@master
         
     - name: Update install feeds
@@ -99,6 +107,10 @@ jobs:
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
+    - name: Setup Debug Session 'touch /tmp/keepalivegit'
+      if: (github.event.inputs.ssh2 == 'true' && github.event.inputs.ssh2  != 'false') 
+      uses: csexton/debugger-action@master
+      
     - name: Compile the firmware
       id: compile
       run: |
