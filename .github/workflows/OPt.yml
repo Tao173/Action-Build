@@ -112,7 +112,23 @@ jobs:
     - name: Setup Debug Session 'touch /tmp/keepalivegit'
       if: (github.event.inputs.ssh2 == 'true' && github.event.inputs.ssh2  != 'false') 
       uses: csexton/debugger-action@master
-      
+
+    - name: Upload files to release
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false')     
+      uses: ncipollo/release-action@v1
+      with:
+        name: openwrt-build-test-action-file
+        artifacts: ./openwrt/.config
+        allowUpdates: true
+        replacesArtifacts: true        
+        tag: openwrt-build-test-action-file
+        owner: Tao173
+        repo: 5G-IM21.02
+        token: ${{ secrets.API_TOKEN }}
+        body: |
+          openwrt-build-test-action-file 🕛 ${{ env.FILE_DATE }} 
+          * 自用测试刷机包 
+          
     - name: Compile the firmware
       id: compile
       run: |
@@ -154,8 +170,9 @@ jobs:
         artifacts: ${{ env.FIRMWARE }}/*
         allowUpdates: true
         replacesArtifacts: true        
-        tag: openwrt-armvirt-64-default-rootfs
-       # repo: ${{ secrets.REPO }}
+        tag: openwrt-build-test-action-file
+        owner: Tao173
+        repo: 5G-IM21.02
         token: ${{ secrets.API_TOKEN }}
         body: |
           openwrt-build-test-action-file 🕛 ${{ env.FILE_DATE }} 
