@@ -37,7 +37,7 @@ jobs:
       with:
         repository: Tao173/5G-IM21.02
         ref: main
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.API_TOKEN }}
         path: openwrt
           
     - name: Check server configuration
@@ -138,7 +138,7 @@ jobs:
         allowUpdates: true
         replacesArtifacts: true        
         tag: openwrt-armvirt-64-default-rootfs
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.API_TOKEN }}
         body: |
           openwrt-armvirt-64-default-rootfs 🕛 ${{ env.FILE_DATE }} 
           * 自用底包 
@@ -146,6 +146,6 @@ jobs:
     - name: Delete Older Workflows
       uses: Mattraks/delete-workflow-runs@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.API_TOKEN }}
         retain_days: 1
         keep_minimum_runs: 1
