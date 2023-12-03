@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       ssh1:
-        description: '是否开启SSH以调试'
+        description: '是否开启更新前SSH以调试'
         required: false
         type: choice
         default: 'false'
@@ -20,7 +20,7 @@ on:
           - true
           - false
       ssh2:
-        description: '是否开启SSH以调试'
+        description: '是否开启编译前SSH以调试'
         required: false
         type: choice
         default: 'false'
@@ -30,7 +30,9 @@ on:
       REPO_URL:
         description: '选择/输入源码链接'
         required: true
-
+      REPO_BRANCH:
+        description: '选择/输入源码分支'
+        required: true
 
 env:
   TZ: Asia/Shanghai
