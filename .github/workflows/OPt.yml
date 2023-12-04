@@ -114,7 +114,7 @@ jobs:
       uses: csexton/debugger-action@master
 
     - name: Upload files to release
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false')     
+      if: (github.event.inputs.ssh2 == 'true' && github.event.inputs.ssh2  != 'false')      
       uses: ncipollo/release-action@v1
       with:
         name: openwrt-build-test-action-file
