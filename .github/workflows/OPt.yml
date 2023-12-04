@@ -150,12 +150,9 @@ jobs:
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cp openwrt/.config build.config
-        mkdir -p Packages
-        cp -rf openwrt/bin/packages/*/*/*.ipk Packages
-        tar -zcvf Packages.tar.gz Packages
-        mv *.config *.tar.gz openwrt/bin/targets/*/*
-        rm -rf  openwrt/build_dir
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        mkdir -p Bin
+        cp -rf openwrt/bin Bin
+        tar -zcvf Bin.tar.gz Bin
         echo "status=success" >>$GITHUB_OUTPUT
 
     - name: Check space usage
@@ -167,7 +164,7 @@ jobs:
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
         name: openwrt-build-test-action-file
-        artifacts: ${{ env.FIRMWARE }}/*
+        artifacts: Bin*
         allowUpdates: true
         replacesArtifacts: true        
         tag: openwrt-build-test-action-file
