@@ -1,0 +1,194 @@
+#===============================================
+# Description: Build OpenWrt
+# Lisence: MIT
+# Original Author: P3TERX
+# DIY: Tao173 
+#===============================================
+
+name: openwrt-build-test-action
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh1:
+        description: '是否开启更新前SSH以调试'
+        required: false
+        type: choice
+        default: 'false'
+        options:
+          - true
+          - false
+      ssh2:
+        description: '是否开启编译前SSH以调试'
+        required: false
+        type: choice
+        default: 'false'
+        options:
+          - true
+          - false
+      REPO_URL:
+        description: '选择/输入源码链接'
+        required: true
+      REPO_BRANCH:
+        description: '选择/输入源码分支'
+        required: true
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  buildone:
+    runs-on: ubuntu-20.04
+    env:
+      FEEDS_CONF: feeds.conf.default
+      CONFIG_FILE: .config
+      PRODUCT_NAME: openwrttest  
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+      
+    - name: Check server configuration
+      run: |
+        echo "警告⚠"
+        echo "若分配的服务器性能不足，务必及时取消，重新运行！"
+        echo "已知CPU型号性能：4-AMD 7763 > 2-8370C > 2-8272CL > 2-8171M > E5系列"
+        echo "已知编译成功CPU型号: 8370C,8171M"
+        echo "已知性能不足CPU型号: 8272CL"
+        echo -e "-------------- ------------CPU信息------------------------------------------\n"
+        echo "CPU物理数量:$(cat /proc/cpuinfo| grep "physical id"| sort| uniq| wc -l)"
+        echo -e "CPU核心及版本信息: $(cat /proc/cpuinfo | grep name | cut -f2 -d: | uniq -c) \n"
+        echo "-------------------------------内存信息-------------------------------------------"
+        echo "已安装内存详细信息: "
+        sudo lshw -short -C memory | grep GiB
+        echo -e "\n"
+        echo "-----------------------------硬盘信息---------------------------------------------"
+        echo -e  "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l) \n"
+        echo "硬盘详情: "
+        df -Th
+        
+    - name: Initialization environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        docker rmi `docker images -q`
+        sudo -E rm -rf /usr/share/dotnet /etc/mysql /etc/php /etc/apt/sources.list.d /usr/local/lib/android
+        sudo -E apt -y purge azure-cli* docker* ghc* zulu* llvm* firefox google* dotnet* powershell* openjdk* mysql* php* mongodb* dotnet* snap* aspnetcore*
+        [ -n "$AGENT_TOOLSDIRECTORY" ] && sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo -E apt update
+        sudo -E apt -y install $(curl -fsSL https://is.gd/depends_ubuntu_2204)
+        sudo -E apt -y autoremove --purge
+        sudo -E systemctl daemon-reload
+        sudo -E apt clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+        echo "status=success" >> ${GITHUB_OUTPUT}
+        df -Th
+
+    - name: Checkout private tools
+      uses: actions/checkout@v4
+      with:
+        repository: Tao173/5G-IM21.02
+        ref: main
+        token: ${{ secrets.API_TOKEN }}
+        path: openwrt
+        
+    - name: Clone source code
+      working-directory: /workdir
+      run: |
+        df -hT $PWD
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        
+    - name: Setup Debug Session 'touch /tmp/keepalivegit'
+      if: (github.event.inputs.ssh1 == 'true' && github.event.inputs.ssh1  != 'false') 
+      uses: csexton/debugger-action@master
+        
+    - name: Update install feeds
+      run: |
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        [ -e files ] && mv files openwrt/files
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        cd openwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
+        
+    - name: Download package
+      id: package
+      run: |
+        cd openwrt
+        make defconfig
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+
+    - name: Setup Debug Session 'touch /tmp/keepalivegit'
+      if: (github.event.inputs.ssh2 == 'true' && github.event.inputs.ssh2  != 'false') 
+      uses: csexton/debugger-action@master
+
+    - name: Upload files to release
+      if: (github.event.inputs.ssh2 == 'true' && github.event.inputs.ssh2  != 'false')      
+      uses: ncipollo/release-action@v1
+      with:
+        name: openwrt-build-test-action-file
+        artifacts: ./openwrt/.config
+        allowUpdates: true
+        replacesArtifacts: true        
+        tag: openwrt-build-test-action-file
+        owner: Tao173
+        repo: 5G-IM21.02
+        token: ${{ secrets.API_TOKEN }}
+        body: |
+          openwrt-build-test-action-file 🕛 ${{ env.FILE_DATE }} 
+          * 自用测试刷机包 
+          
+    - name: Compile the firmware
+      id: compile
+      run: |
+        cd openwrt
+        echo -e "$(nproc) thread compile"
+        make -j$(nproc) || make -j1 || make -j1 V=s
+        echo "status=success" >>$GITHUB_OUTPUT
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "DATE=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_ENV
+        echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+
+    - name: Check space usage
+      if: (!cancelled())
+      run: df -hT
+
+    - name: Organize files
+      id: organize
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        cp openwrt/.config build.config
+        mkdir -p Bin
+        cp -rf openwrt/bin Bin
+        tar -zcvf Bin.tar.gz Bin
+        echo "status=success" >>$GITHUB_OUTPUT
+
+    - name: Check space usage
+      if: (!cancelled())
+      run: df -hT
+
+    - name: Upload firmware to release
+      uses: ncipollo/release-action@v1
+      if: steps.organize.outputs.status == 'success' && !cancelled()
+      with:
+        name: openwrt-build-test-action-file
+        artifacts: Bin*
+        allowUpdates: true
+        replacesArtifacts: true        
+        tag: openwrt-build-test-action-file
+        owner: Tao173
+        repo: 5G-IM21.02
+        token: ${{ secrets.API_TOKEN }}
+        body: |
+          openwrt-build-test-action-file 🕛 ${{ env.FILE_DATE }} 
+          * 自用测试刷机包 
+          
+    - name: Delete Older Workflows
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        token: ${{ secrets.API_TOKEN }}
+        retain_days: 1
+        keep_minimum_runs: 1
