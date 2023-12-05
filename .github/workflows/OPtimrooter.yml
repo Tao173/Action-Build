@@ -5,7 +5,7 @@
 # DIY: Tao173 
 #===============================================
 
-name: openwrt-build-test-action
+name: imrooter-build-test-action
 
 on:
   repository_dispatch:
