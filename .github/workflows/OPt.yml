@@ -167,8 +167,8 @@ jobs:
       uses: ncipollo/release-action@v1
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: openwrt-build-test-action-file
-        artifacts: Bin*
+        name: openwrt-build-test-action-file-${{ env.DEVICE_NAME }}
+        artifacts: Bin.tar.gz
         allowUpdates: true
         replacesArtifacts: true        
         tag: openwrt-build-test-action-file
