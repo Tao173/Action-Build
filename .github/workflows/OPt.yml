@@ -121,7 +121,7 @@ jobs:
       if: (github.event.inputs.ssh2 == 'true' && github.event.inputs.ssh2  != 'false')      
       uses: ncipollo/release-action@main
       with:
-        name: openwrt-build-test-action-file
+        name: openwrt-build-test-action-file-${{ env.FILE_DATE }}
         artifacts: ./openwrt/.config
         allowUpdates: true
         replacesArtifacts: true        
