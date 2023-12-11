@@ -41,13 +41,6 @@ jobs:
       CONFIG_FILE: ipq/hr6000.config
       PRODUCT_NAME: ARMv8_Plus  
     steps:
-   // - name: Checkout private tools
-   //   uses: actions/checkout@v4
-   //   with:
-   //     repository: Tao173/5G-IM21.02
-   //     ref: main
-   //     token: ${{ secrets.API_TOKEN }}
-   //     path: openwrt
     - name: Clone source code
       working-directory: /workdir
       run: |
