@@ -39,13 +39,9 @@ jobs:
       CONFIG_FILE: ipq/hr6000.config
       PRODUCT_NAME: ARMv8_Plus  
     steps:
-    - name: Clone source code
-      working-directory: /workdir
-      run: |
-        df -hT $PWD
-        git clone https://github.com/xiaoxifu64/openwrt-gl-ax1800.git -b master openwrt
-        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
-        
+    - name: Checkout
+      uses: actions/checkout@main
+      
     - name: Check server configuration
       run: |
         echo "警告⚠"
@@ -87,9 +83,16 @@ jobs:
     - name: Setup Debug Session 'touch /tmp/keepalivegit'
       if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') 
       uses: csexton/debugger-action@master
+      
+    - name: Clone source code
+      working-directory: /workdir
+      run: |
+        df -hT $PWD
+        git clone https://github.com/xiaoxifu64/openwrt-gl-ax1800.git -b master openwrt
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         
     - name: Install feeds
-      run: cd openwrt && ./scripts/feeds install -a
+      run: cd openwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
 
     - name: Download package
       id: package
