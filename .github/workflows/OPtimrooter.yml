@@ -132,7 +132,7 @@ jobs:
         artifacts: ./openwrt/.config
         allowUpdates: true
         replacesArtifacts: true        
-        tag: openwrt-build-test-action-file
+        tag: openwrt-build-test-action-file-config
         owner: Tao173
         repo: 5G-IM21.02
         token: ${{ secrets.API_TOKEN }}
