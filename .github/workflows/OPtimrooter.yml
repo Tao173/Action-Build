@@ -14,8 +14,6 @@ name: imrooter-build-action
 # DIY: Tao173 
 #===============================================
 
-name: Private-Action
-
 on:
   repository_dispatch:
   workflow_dispatch:
