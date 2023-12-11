@@ -5,36 +5,32 @@
 # DIY: Tao173 
 #===============================================
 
-name: imrooter-build-test-action
+name: imrooter-build-action
+
+#===============================================
+# Description: Build OpenWrt
+# Lisence: MIT
+# Original Author: P3TERX
+# DIY: Tao173 
+#===============================================
+
+name: Private-Action
 
 on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
-      ssh1:
-        description: '是否开启更新前SSH以调试'
+      ssh:
+        description: '是否开启SSH以调试'
         required: false
         type: choice
         default: 'false'
         options:
           - true
           - false
-      ssh2:
-        description: '是否开启编译前SSH以调试'
-        required: false
-        type: choice
-        default: 'false'
-        options:
-          - true
-          - false
-      REPO_URL:
-        description: '选择/输入源码链接'
-        required: true
-      REPO_BRANCH:
-        description: '选择/输入源码分支'
-        required: true
 
 env:
+  OPENWRT_VER: Im21.02
   TZ: Asia/Shanghai
 
 jobs:
@@ -42,12 +38,23 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       FEEDS_CONF: feeds.conf.default
-      CONFIG_FILE: .config
-      PRODUCT_NAME: openwrttest  
+      CONFIG_FILE: ipq/hr6000.config
+      PRODUCT_NAME: ARMv8_Plus  
     steps:
-    - name: Checkout
-      uses: actions/checkout@main
-      
+   // - name: Checkout private tools
+   //   uses: actions/checkout@v4
+   //   with:
+   //     repository: Tao173/5G-IM21.02
+   //     ref: main
+   //     token: ${{ secrets.API_TOKEN }}
+   //     path: openwrt
+    - name: Clone source code
+      working-directory: /workdir
+      run: |
+        df -hT $PWD
+        git clone https://github.com/xiaoxifu64/openwrt-gl-ax1800.git -b master openwrt
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        
     - name: Check server configuration
       run: |
         echo "警告⚠"
@@ -85,32 +92,14 @@ jobs:
         sudo chown $USER:$GROUPS /workdir
         echo "status=success" >> ${GITHUB_OUTPUT}
         df -Th
-
-    - name: Checkout private tools
-      uses: actions/checkout@v4
-      with:
-        repository: Tao173/5G-IM21.02
-        ref: main
-        token: ${{ secrets.API_TOKEN }}
-        path: openwrt
-        
-    - name: Clone source code
-      working-directory: /workdir
-      run: |
-        df -hT $PWD
-        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         
     - name: Setup Debug Session 'touch /tmp/keepalivegit'
-      if: (github.event.inputs.ssh1 == 'true' && github.event.inputs.ssh1  != 'false') 
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') 
       uses: csexton/debugger-action@master
         
-    - name: Update install feeds
-      run: |
-        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
-        [ -e files ] && mv files openwrt/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        cd openwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
-        
+    - name: Install feeds
+      run: cd openwrt && ./scripts/feeds install -a
+
     - name: Download package
       id: package
       run: |
@@ -120,26 +109,6 @@ jobs:
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
-    - name: Setup Debug Session 'touch /tmp/keepalivegit'
-      if: (github.event.inputs.ssh2 == 'true' && github.event.inputs.ssh2  != 'false') 
-      uses: csexton/debugger-action@master
-
-    - name: Upload files to release
-      if: (github.event.inputs.ssh2 == 'true' && github.event.inputs.ssh2  != 'false')      
-      uses: ncipollo/release-action@v1
-      with:
-        name: openwrt-build-test-action-file-${{ env.FILE_DATE }}
-        artifacts: ./openwrt/.config
-        allowUpdates: true
-        replacesArtifacts: true        
-        tag: openwrt-build-test-action-file-config
-        owner: Tao173
-        repo: 5G-IM21.02
-        token: ${{ secrets.API_TOKEN }}
-        body: |
-          openwrt-build-test-action-file 🕛 ${{ env.FILE_DATE }} 
-          * 自用测试刷机包 
-          
     - name: Compile the firmware
       id: compile
       run: |
@@ -161,31 +130,34 @@ jobs:
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cp openwrt/.config build.config
-        mkdir -p Bin
-        cp -rf openwrt/bin Bin
-        tar -zcvf Bin.tar.gz Bin
+        mkdir -p Packages
+        cp -rf openwrt/bin/packages/*/*/*.ipk Packages
+        tar -zcvf Packages.tar.gz Packages
+        mv *.config *.tar.gz openwrt/bin/targets/*/*
+        rm -rf  openwrt/build_dir
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >>$GITHUB_OUTPUT
 
     - name: Check space usage
       if: (!cancelled())
       run: df -hT
-
+        
     - name: Upload firmware to release
       uses: ncipollo/release-action@v1
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: OpenWrt_Config_${{ env.DEVICE_NAME }}
-        artifacts: Bin*
-        allowUpdates: true
-        replacesArtifacts: true        
-        tag: openwrt-build-test-action-file
+        name: openwrt-armvirt-64-default-rootfs
+        artifacts: openwrt/bin/targets/armvirt/64/*.gz
         owner: Tao173
         repo: 5G-IM21.02
+        allowUpdates: true
+        replacesArtifacts: true        
+        tag: openwrt-armvirt-64-default-rootfs
         token: ${{ secrets.API_TOKEN }}
         body: |
-          openwrt-build-test-action-file 🕛 ${{ env.FILE_DATE }} 
-          * 自用测试刷机包 
-          
+          openwrt-armvirt-64-default-rootfs 🕛 ${{ env.FILE_DATE }} 
+          * 自用底包 
+
     - name: Delete Older Workflows
       uses: Mattraks/delete-workflow-runs@v2
       with:

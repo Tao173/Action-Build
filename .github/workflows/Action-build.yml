@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       FEEDS_CONF: feeds.conf.default
-      CONFIG_FILE: .config
+      CONFIG_FILE: arm/rk3399.config
       PRODUCT_NAME: ARMv8_Plus  
     steps:
     - name: Checkout private tools
