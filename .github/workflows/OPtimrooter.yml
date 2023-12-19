@@ -88,12 +88,19 @@ jobs:
     - name: Setup Debug Session 'touch /tmp/keepalivegit'
       if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') 
       uses: csexton/debugger-action@master
-      
+
+    - name: Checkout private tools
+      uses: actions/checkout@v4
+      with:
+        repository: Tao173/rooteripq6000
+        ref: main
+        token: ${{ secrets.API_TOKEN }}
+        path: openwrt
+        
     - name: Clone source code
       working-directory: /workdir
       run: |
         df -hT $PWD
-        git clone https://github.com/Tao173/rooteropenwrt-gl-ax1800.git -b master openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         
     - name: Install feeds
