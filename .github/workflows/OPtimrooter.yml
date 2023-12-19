@@ -39,8 +39,13 @@ jobs:
       CONFIG_FILE: ipq/hr6000.config
       PRODUCT_NAME: ARMv8_Plus  
     steps:
-    - name: Checkout
-      uses: actions/checkout@main
+    - name: Checkout private tools
+      uses: actions/checkout@v4
+      with:
+        repository: Tao173/rooteripq6000
+        ref: main
+        token: ${{ secrets.API_TOKEN }}
+        path: openwrt
       
     - name: Check server configuration
       run: |
